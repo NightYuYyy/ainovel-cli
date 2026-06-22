@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/voocel/ainovel-cli/internal/utils"
+	"github.com/NightYuYyy/ainovel-cli/internal/utils"
 )
 
 // 默认章节标题正则。覆盖常见中文（第N章/回/话/卷/节/幕、卷N、序章/楔子/尾声/番外/外传 等）

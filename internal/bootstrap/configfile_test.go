@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/voocel/ainovel-cli/internal/errs"
+	"github.com/NightYuYyy/ainovel-cli/internal/errs"
 )
 
 const validGlobal = `{

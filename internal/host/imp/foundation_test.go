@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/voocel/agentcore"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 type mockLLM struct {

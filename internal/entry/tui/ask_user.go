@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/voocel/ainovel-cli/internal/tools"
-	"github.com/voocel/ainovel-cli/internal/utils"
+	"github.com/NightYuYyy/ainovel-cli/internal/tools"
+	"github.com/NightYuYyy/ainovel-cli/internal/utils"
 )
 
 type askUserRequest struct {

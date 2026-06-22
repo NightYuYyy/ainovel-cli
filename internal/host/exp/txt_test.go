@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
 )
 
 func TestStripChapterTitleHeader(t *testing.T) {

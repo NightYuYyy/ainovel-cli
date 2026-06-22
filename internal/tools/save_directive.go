@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/voocel/agentcore/schema"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/errs"
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/errs"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 // SaveDirectiveTool 持久化用户的长效创作要求（仅 Coordinator 持有）。

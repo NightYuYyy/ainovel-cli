@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/utils"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/utils"
 )
 
 type scannedSource struct {

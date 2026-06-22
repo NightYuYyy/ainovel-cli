@@ -195,13 +195,13 @@ ToolResultMicrocompact → LightTrim → StoreSummaryCompact → FullSummary
 
 ```bash
 # 一键安装（macOS / Linux，无需 Go）
-curl -fsSL https://raw.githubusercontent.com/voocel/ainovel-cli/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/NightYuYyy/ainovel-cli/main/scripts/install.sh | sh
 
 # 安装指定版本
-curl -fsSL https://raw.githubusercontent.com/voocel/ainovel-cli/main/scripts/install.sh | sh -s -- v1.2.3
+curl -fsSL https://raw.githubusercontent.com/NightYuYyy/ainovel-cli/main/scripts/install.sh | sh -s -- v1.2.3
 
 # 或通过 Go 安装
-go install github.com/voocel/ainovel-cli/cmd/ainovel-cli@latest
+go install github.com/NightYuYyy/ainovel-cli/cmd/ainovel-cli@latest
 
 # 查看版本 / 更新到最新版本
 ainovel-cli --version
@@ -211,7 +211,7 @@ ainovel-cli update
 ainovel-cli
 ```
 
-> Windows 或手动安装：前往 [Releases](https://github.com/voocel/ainovel-cli/releases/latest) 下载对应平台的包。
+> Windows 或手动安装：前往 [Releases](https://github.com/NightYuYyy/ainovel-cli/releases/latest) 下载对应平台的包。
 
 ### Docker
 
@@ -224,13 +224,13 @@ mkdir -p config workspace
 docker run --rm -it \
   -v "$PWD/config:/root/.ainovel" \
   -v "$PWD/workspace:/workspace" \
-  ghcr.io/voocel/ainovel-cli:latest
+  ghcr.io/NightYuYyy/ainovel-cli:latest
 
 # Headless
 docker run --rm \
   -v "$PWD/config:/root/.ainovel" \
   -v "$PWD/workspace:/workspace" \
-  ghcr.io/voocel/ainovel-cli:latest \
+  ghcr.io/NightYuYyy/ainovel-cli:latest \
   --headless --prompt "写一本东方玄幻长篇，主角从边陲小城起步"
 ```
 

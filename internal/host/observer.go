@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/voocel/agentcore"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	storepkg "github.com/voocel/ainovel-cli/internal/store"
-	"github.com/voocel/ainovel-cli/internal/utils"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	storepkg "github.com/NightYuYyy/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/utils"
 	"github.com/voocel/litellm"
 )
 

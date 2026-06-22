@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/voocel/agentcore/schema"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/errs"
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/errs"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 // SaveArcSummaryTool 保存弧级摘要和角色快照，Editor 在弧结束时调用。

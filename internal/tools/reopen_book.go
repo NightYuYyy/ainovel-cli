@@ -7,9 +7,9 @@ import (
 	"slices"
 
 	"github.com/voocel/agentcore/schema"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/errs"
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/errs"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 // ReopenBookTool 把已完结的书重新打开进入返工态（仅 Coordinator 持有）。

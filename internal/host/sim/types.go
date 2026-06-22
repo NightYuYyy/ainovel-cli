@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/voocel/agentcore"
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 type LLMChat interface {

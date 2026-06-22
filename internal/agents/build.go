@@ -11,14 +11,14 @@ import (
 	"github.com/voocel/agentcore"
 	corecontext "github.com/voocel/agentcore/context"
 	"github.com/voocel/agentcore/subagent"
-	"github.com/voocel/ainovel-cli/assets"
-	"github.com/voocel/ainovel-cli/internal/agents/ctxpack"
-	"github.com/voocel/ainovel-cli/internal/bootstrap"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/host/reminder"
-	"github.com/voocel/ainovel-cli/internal/rules"
-	"github.com/voocel/ainovel-cli/internal/store"
-	"github.com/voocel/ainovel-cli/internal/tools"
+	"github.com/NightYuYyy/ainovel-cli/assets"
+	"github.com/NightYuYyy/ainovel-cli/internal/agents/ctxpack"
+	"github.com/NightYuYyy/ainovel-cli/internal/bootstrap"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/host/reminder"
+	"github.com/NightYuYyy/ainovel-cli/internal/rules"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/tools"
 )
 
 // agentToRole 把 subagent name 归一为 ModelSet 认得的 role 名。

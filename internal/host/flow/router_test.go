@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
-	storepkg "github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	storepkg "github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 // helper：构造一个处于 Writing 阶段、分层模式的 Progress。

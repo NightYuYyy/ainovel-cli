@@ -5,7 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/NightYuYyy/ainovel-cli/internal/host"
 )
 
 type slashCommandSpec struct {

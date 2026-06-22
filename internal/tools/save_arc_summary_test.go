@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 func TestSaveArcSummaryPersistsStyleRulesDialogueObjects(t *testing.T) {

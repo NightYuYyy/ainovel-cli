@@ -6,14 +6,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/voocel/ainovel-cli/assets"
-	"github.com/voocel/ainovel-cli/internal/bootstrap"
-	"github.com/voocel/ainovel-cli/internal/diag"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/entry/startup"
-	"github.com/voocel/ainovel-cli/internal/host"
-	"github.com/voocel/ainovel-cli/internal/logger"
-	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/assets"
+	"github.com/NightYuYyy/ainovel-cli/internal/bootstrap"
+	"github.com/NightYuYyy/ainovel-cli/internal/diag"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/entry/startup"
+	"github.com/NightYuYyy/ainovel-cli/internal/host"
+	"github.com/NightYuYyy/ainovel-cli/internal/logger"
+	"github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 type Options struct {

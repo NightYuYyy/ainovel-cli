@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/voocel/agentcore/llm"
-	"github.com/voocel/ainovel-cli/internal/errs"
-	"github.com/voocel/ainovel-cli/internal/models"
-	"github.com/voocel/ainovel-cli/internal/utils"
+	"github.com/NightYuYyy/ainovel-cli/internal/errs"
+	"github.com/NightYuYyy/ainovel-cli/internal/models"
+	"github.com/NightYuYyy/ainovel-cli/internal/utils"
 )
 
 // DefaultContextWindow 模型未在 registry 登记时的兜底窗口大小。

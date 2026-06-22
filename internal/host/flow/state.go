@@ -1,7 +1,7 @@
 package flow
 
 import (
-	storepkg "github.com/voocel/ainovel-cli/internal/store"
+	storepkg "github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 // LoadState 从 Store 读取 Route 所需的全部事实。

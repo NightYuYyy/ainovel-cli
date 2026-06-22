@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
 )
 
 // InvalidPendingRewrites 检测返工队列里混入未完成章节。

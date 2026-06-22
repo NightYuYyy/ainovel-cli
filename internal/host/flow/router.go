@@ -12,8 +12,8 @@ package flow
 import (
 	"fmt"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
-	storepkg "github.com/voocel/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	storepkg "github.com/NightYuYyy/ainovel-cli/internal/store"
 )
 
 // Instruction 指示 Host 下一步要求 Coordinator 调用的子代理与任务。

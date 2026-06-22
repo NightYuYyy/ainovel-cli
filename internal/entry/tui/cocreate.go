@@ -6,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/voocel/ainovel-cli/internal/entry/startup"
-	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/NightYuYyy/ainovel-cli/internal/entry/startup"
+	"github.com/NightYuYyy/ainovel-cli/internal/host"
 )
 
 type startupMode int

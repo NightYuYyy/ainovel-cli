@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/voocel/agentcore"
-	"github.com/voocel/ainovel-cli/internal/bootstrap"
+	"github.com/NightYuYyy/ainovel-cli/internal/bootstrap"
 )
 
 // 预算状态机：单调递进，每次迁移恰好触发一次副作用，不回退。

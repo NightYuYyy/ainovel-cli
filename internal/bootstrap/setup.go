@@ -9,8 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/voocel/ainovel-cli/internal/rules"
-	"github.com/voocel/ainovel-cli/internal/utils"
+	"github.com/NightYuYyy/ainovel-cli/internal/rules"
+	"github.com/NightYuYyy/ainovel-cli/internal/utils"
 )
 
 // exampleConfig 是引导后写入 ~/.ainovel/config.example.jsonc 的带注释模板。

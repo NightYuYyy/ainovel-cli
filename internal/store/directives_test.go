@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
 )
 
 func TestDirectivesLoadEmpty(t *testing.T) {

@@ -6,12 +6,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/voocel/ainovel-cli/assets"
-	"github.com/voocel/ainovel-cli/internal/bootstrap"
-	"github.com/voocel/ainovel-cli/internal/entry/headless"
-	"github.com/voocel/ainovel-cli/internal/entry/tui"
-	"github.com/voocel/ainovel-cli/internal/rules"
-	buildversion "github.com/voocel/ainovel-cli/internal/version"
+	"github.com/NightYuYyy/ainovel-cli/assets"
+	"github.com/NightYuYyy/ainovel-cli/internal/bootstrap"
+	"github.com/NightYuYyy/ainovel-cli/internal/entry/headless"
+	"github.com/NightYuYyy/ainovel-cli/internal/entry/tui"
+	"github.com/NightYuYyy/ainovel-cli/internal/entry/web"
+	"github.com/NightYuYyy/ainovel-cli/internal/rules"
+	buildversion "github.com/NightYuYyy/ainovel-cli/internal/version"
 )
 
 var (
@@ -45,6 +46,9 @@ func main() {
 	if bootstrap.NeedsSetup(opts.ConfigPath) {
 		if opts.Headless {
 			die("error: headless 模式不支持首次引导，请先运行一次 TUI 完成配置")
+		}
+		if opts.Web {
+			die("error: web 模式不支持首次引导，请先运行一次 TUI 完成配置（ainovel-cli），或手动创建 ~/.ainovel/config.json")
 		}
 		setupCfg, err := bootstrap.RunSetup()
 		if err != nil {
@@ -111,6 +115,12 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 	if opts.Prompt != "" || opts.PromptFile != "" {
 		die("error: --prompt/--prompt-file 仅能在 --headless 模式下使用")
 	}
+	if opts.Web {
+		if err := web.Run(cfg, bundle, web.Options{Addr: opts.WebAddr}); err != nil {
+			die("error: %v", err)
+		}
+		return
+	}
 	if err := tui.Run(cfg, bundle, versionInfo().Version); err != nil {
 		die("error: %v", err)
 	}
@@ -119,6 +129,8 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 type cliOptions struct {
 	ConfigPath    string
 	Headless      bool
+	Web           bool
+	WebAddr       string
 	Prompt        string
 	PromptFile    string
 	Version       bool
@@ -162,17 +174,19 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 			i++
 		case "--headless":
 			opts.Headless = true
+		case "--web":
+			opts.Web = true
+		case "--addr":
+			if i+1 >= len(argv) {
+				return opts, nil, fmt.Errorf("--addr 缺少值")
+			}
+			opts.WebAddr = argv[i+1]
+			i++
 		case "--prompt":
 			if i+1 >= len(argv) {
 				return opts, nil, fmt.Errorf("--prompt 缺少值")
 			}
 			opts.Prompt = argv[i+1]
-			i++
-		case "--prompt-file":
-			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--prompt-file 缺少值")
-			}
-			opts.PromptFile = argv[i+1]
 			i++
 		default:
 			args = append(args, argv[i])
@@ -181,10 +195,10 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 	if opts.Prompt != "" && opts.PromptFile != "" {
 		return opts, nil, fmt.Errorf("--prompt 和 --prompt-file 不能同时使用")
 	}
-	if opts.Version && (opts.Update || opts.ConfigPath != "" || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
+	if opts.Version && (opts.Update || opts.ConfigPath != "" || opts.Headless || opts.Web || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
 		return opts, nil, fmt.Errorf("version 不能与其他启动参数混用")
 	}
-	if opts.Update && (opts.ConfigPath != "" || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
+	if opts.Update && (opts.ConfigPath != "" || opts.Headless || opts.Web || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
 		return opts, nil, fmt.Errorf("update 不能与其他启动参数混用")
 	}
 	return opts, args, nil
@@ -201,7 +215,7 @@ func versionInfo() buildversion.Info {
 func runSelfUpdate(target string) error {
 	info := versionInfo()
 	result, err := buildversion.Update(context.Background(), buildversion.UpdateOptions{
-		Repo:           "voocel/ainovel-cli",
+		Repo:           "NightYuYyy/ainovel-cli",
 		BinaryName:     "ainovel-cli",
 		TargetVersion:  target,
 		CurrentVersion: info.Version,

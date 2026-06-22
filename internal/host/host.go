@@ -13,20 +13,20 @@ import (
 
 	"github.com/voocel/agentcore"
 	corecontext "github.com/voocel/agentcore/context"
-	"github.com/voocel/ainovel-cli/assets"
-	"github.com/voocel/ainovel-cli/internal/agents"
-	"github.com/voocel/ainovel-cli/internal/agents/ctxpack"
-	"github.com/voocel/ainovel-cli/internal/bootstrap"
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/host/exp"
-	"github.com/voocel/ainovel-cli/internal/host/flow"
-	"github.com/voocel/ainovel-cli/internal/host/imp"
-	"github.com/voocel/ainovel-cli/internal/host/sim"
-	modelreg "github.com/voocel/ainovel-cli/internal/models"
-	"github.com/voocel/ainovel-cli/internal/notify"
-	"github.com/voocel/ainovel-cli/internal/rules"
-	storepkg "github.com/voocel/ainovel-cli/internal/store"
-	"github.com/voocel/ainovel-cli/internal/tools"
+	"github.com/NightYuYyy/ainovel-cli/assets"
+	"github.com/NightYuYyy/ainovel-cli/internal/agents"
+	"github.com/NightYuYyy/ainovel-cli/internal/agents/ctxpack"
+	"github.com/NightYuYyy/ainovel-cli/internal/bootstrap"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/host/exp"
+	"github.com/NightYuYyy/ainovel-cli/internal/host/flow"
+	"github.com/NightYuYyy/ainovel-cli/internal/host/imp"
+	"github.com/NightYuYyy/ainovel-cli/internal/host/sim"
+	modelreg "github.com/NightYuYyy/ainovel-cli/internal/models"
+	"github.com/NightYuYyy/ainovel-cli/internal/notify"
+	"github.com/NightYuYyy/ainovel-cli/internal/rules"
+	storepkg "github.com/NightYuYyy/ainovel-cli/internal/store"
+	"github.com/NightYuYyy/ainovel-cli/internal/tools"
 )
 
 // Host 是运行时薄外壳。
@@ -850,6 +850,69 @@ func (h *Host) SwitchModel(role, provider, model string) error {
 		Time:     time.Now(),
 		Category: "SYSTEM",
 		Summary:  fmt.Sprintf("模型已切换：%s → %s/%s", role, provider, model),
+		Level:    "info",
+	})
+	return nil
+}
+// SaveProvider 添加或更新一个 provider 配置，持久化到 config.json。
+// 新增 provider 后需要重建 ModelSet 才能在该 provider 上切换模型——
+// 但 Web 场景下用户通常先加好 provider 再切模型，下次启动自然生效；
+// 当前 session 内如果立即切到新 provider，models.Swap 会走 fallback 校验路径。
+func (h *Host) SaveProvider(name string, pc bootstrap.ProviderConfig) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if name == "" {
+		return fmt.Errorf("provider name is required")
+	}
+	if h.cfg.Providers == nil {
+		h.cfg.Providers = make(map[string]bootstrap.ProviderConfig)
+	}
+	h.cfg.Providers[name] = pc
+	if path := bootstrap.DefaultConfigPath(); path != "" {
+		if err := bootstrap.SaveConfig(path, h.cfg); err != nil {
+			return fmt.Errorf("保存配置失败: %w", err)
+		}
+	}
+	h.emitEvent(Event{
+		Time:     time.Now(),
+		Category: "SYSTEM",
+		Summary:  fmt.Sprintf("Provider 已保存: %s", name),
+		Level:    "info",
+	})
+	return nil
+}
+
+// DeleteProvider 删除一个 provider 配置。被角色引用的 provider 不允许删除。
+func (h *Host) DeleteProvider(name string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.cfg.Providers[name]; !ok {
+		return fmt.Errorf("provider %q 不存在", name)
+	}
+	// 检查是否被 default 或角色引用
+	if h.cfg.Provider == name {
+		return fmt.Errorf("provider %q 正在被默认配置引用，无法删除", name)
+	}
+	for role, rc := range h.cfg.Roles {
+		if rc.Provider == name {
+			return fmt.Errorf("provider %q 正在被角色 %q 引用，无法删除", name, role)
+		}
+		for _, f := range rc.Fallbacks {
+			if f.Provider == name {
+				return fmt.Errorf("provider %q 正在被角色 %q 的 fallback 引用，无法删除", name, role)
+			}
+		}
+	}
+	delete(h.cfg.Providers, name)
+	if path := bootstrap.DefaultConfigPath(); path != "" {
+		if err := bootstrap.SaveConfig(path, h.cfg); err != nil {
+			return fmt.Errorf("保存配置失败: %w", err)
+		}
+	}
+	h.emitEvent(Event{
+		Time:     time.Now(),
+		Category: "SYSTEM",
+		Summary:  fmt.Sprintf("Provider 已删除: %s", name),
 		Level:    "info",
 	})
 	return nil

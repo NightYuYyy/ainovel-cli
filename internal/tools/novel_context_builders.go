@@ -3,9 +3,9 @@ package tools
 import (
 	"slices"
 
-	"github.com/voocel/ainovel-cli/internal/domain"
-	"github.com/voocel/ainovel-cli/internal/rules"
-	"github.com/voocel/ainovel-cli/internal/stylestat"
+	"github.com/NightYuYyy/ainovel-cli/internal/domain"
+	"github.com/NightYuYyy/ainovel-cli/internal/rules"
+	"github.com/NightYuYyy/ainovel-cli/internal/stylestat"
 )
 
 type contextBuildState struct {
