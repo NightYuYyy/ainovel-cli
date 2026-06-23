@@ -580,6 +580,9 @@ body {
   font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
   text-transform: uppercase; color: var(--ink-soft); margin-bottom: var(--space-md);
 }
+.model-save-row { display: flex; align-items: center; margin-top: var(--space-md); }
+.model-save-status-ok { color: var(--success) !important; }
+.model-save-status-err { color: var(--error) !important; }
 .role-grid {
   display: grid; grid-template-columns: 80px 1fr 1fr 100px; gap: var(--space-sm);
   align-items: center; margin-bottom: var(--space-sm);
@@ -704,6 +707,12 @@ body {
       <button id="btn-resume">恢复上次</button>
       <button id="btn-startup-settings">⚙ 设置</button>
     </div>
+      <div id="running-task-bar" class="hidden" style="margin-top:12px;padding:10px 16px;background:var(--info-bg);border:1px solid var(--info);border-radius:var(--radius-md);font-size:12px;color:var(--info);display:flex;align-items:center;gap:8px;">
+        <span>🔄 正在创作：</span><b id="running-task-name"></b>
+        <span style="margin-left:auto;font-size:11px;opacity:0.8;" id="running-task-phase"></span>
+        <button onclick="location.reload()" style="padding:2px 10px;font-size:11px;border:1px solid var(--info);border-radius:var(--radius-sm);background:transparent;color:var(--info);cursor:pointer;font-family:inherit;">刷新</button>
+        <button onclick="enterWorkspace()" style="padding:2px 12px;font-size:11px;border:1px solid var(--primary);border-radius:var(--radius-sm);background:var(--primary);color:#fff;cursor:pointer;font-family:inherit;font-weight:500;">进入工作台 →</button>
+      </div>
   </div>
 
   <div id="cocreate-section" class="hidden">
@@ -753,6 +762,10 @@ body {
     <aside id="sidebar">
       <div id="sidebar-toggle" onclick="toggleSidebar()" title="折叠侧栏">◀</div>
       <div id="sidebar-body">
+        <section id="sec-tasks">
+          <div class="sidebar-label">任务</div>
+          <div id="task-list"></div>
+        </section>
         <section id="sec-agents">
           <div class="sidebar-label">Agents</div>
           <div id="agent-list"></div>
@@ -835,7 +848,7 @@ body {
           <button id="btn-add-provider" style="margin-top:4px;padding:6px 14px;font-size:12px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;font-family:inherit;">添加/更新渠道</button>
         </div>
       </div>
-      <div class="settings-section"><h3>模型配置</h3><div id="role-rows"></div></div>
+      <div class="settings-section"><h3>模型配置</h3><div id="role-rows"></div><div class="model-save-row"><button id="btn-save-models" style="margin-top:8px;padding:6px 18px;font-size:13px;border:1px solid var(--primary);border-radius:var(--radius-sm);background:var(--primary);color:#fff;cursor:pointer;font-family:inherit;font-weight:500;">保存模型配置</button><span id="model-save-status" style="margin-left:10px;font-size:12px;color:var(--ink-muted);"></span></div></div>
       <div class="settings-section"><h3>导出</h3>
         <div class="export-row"><select id="export-format"><option value="txt">TXT</option><option value="epub">EPUB</option></select><input type="text" id="export-path" placeholder="留空=默认路径"><button id="btn-export" style="padding:6px 14px;font-size:12px;border:1px solid var(--hairline);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;font-family:inherit;white-space:nowrap;">导出</button></div>
         <div class="export-row"><label style="font-size:12px;color:var(--ink-muted);display:flex;align-items:center;gap:4px;"><input type="checkbox" id="export-overwrite"> 覆盖已存在文件</label></div>
@@ -1124,6 +1137,50 @@ function renderStreamRound(text) {
    ═══════════════════════════════════════════════════════════════ */
 function updateSnapshot(s) {
   if (!s) return;
+  // 库快照格式（有 tasks 数组）
+  if (s.tasks) {
+    updateFromLibrarySnapshot(s);
+  } else {
+    // 旧格式：单书运行时快照
+    updateFromRuntimeSnapshot(s);
+  }
+}
+
+function updateFromLibrarySnapshot(s) {
+  const activeTask = s.tasks ? s.tasks.find(t => t.id === s.active_task) : null;
+
+  // 状态栏
+  const pill = $('status-pill');
+  const label = $('status-label');
+  if (activeTask && activeTask.status === 'running') {
+    label.textContent = '运行中';
+    pill.className = 'status-pill status-running';
+  } else if (s.queue_size > 0) {
+    label.textContent = '排队中';
+    pill.className = 'status-pill status-idle';
+  } else {
+    label.textContent = '待机';
+    pill.className = 'status-pill status-idle';
+  }
+
+  const name = activeTask ? (activeTask.book_name || activeTask.prompt || activeTask.id) : '-';
+  $('stat-phase').textContent = name.length > 20 ? name.substring(0, 20) + '...' : name;
+
+  if (activeTask && activeTask.progress) {
+    $('stat-chapter').textContent = activeTask.progress.chapters + '/' + activeTask.progress.total_chapters;
+    $('stat-words').textContent = (activeTask.progress.word_count || 0).toLocaleString();
+  } else {
+    $('stat-chapter').textContent = '-';
+    $('stat-words').textContent = '-';
+  }
+  $('stat-cost').textContent = '$0.00';
+  $('stat-model').textContent = '-';
+
+  // 侧栏：显示任务列表
+  updateTaskList(s.tasks);
+}
+
+function updateFromRuntimeSnapshot(s) {
   updateStatusBar(s);
   updateAgents(s);
   updateUsage(s);
@@ -1134,6 +1191,114 @@ function updateSnapshot(s) {
   updateDetail(s);
 }
 
+let selectedTaskId = null;
+let taskEventSource = null;
+
+function selectTask(id) {
+  selectedTaskId = id;
+  // 断开旧的事件流
+  if (taskEventSource) { taskEventSource.close(); taskEventSource = null; }
+  // 高亮选中行
+  document.querySelectorAll('#task-list .agent-row').forEach(r => r.style.background = '');
+
+  if (!id) return;
+
+  // 连接任务事件流
+  taskEventSource = new EventSource('/api/tasks/' + id + '/events');
+  taskEventSource.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'snapshot') {
+        updateFromRuntimeSnapshot(msg.data);
+        // 高亮当前选中的任务
+        const rows = document.querySelectorAll('#task-list .agent-row');
+        rows.forEach(r => {
+          const nameEl = r.querySelector('.agent-name');
+          if (nameEl && nameEl.dataset && nameEl.dataset.taskId === id) {
+            r.style.background = 'var(--primary-ring)';
+          }
+        });
+      } else if (msg.type === 'event') {
+        handleEvent(msg.data);
+      } else if (msg.type === 'closed') {
+        fetchSnapshot(); // 刷新任务列表
+      }
+    } catch(_) {}
+  };
+  taskEventSource.onerror = () => {
+    // 任务事件流断开，回退到库快照
+    if (taskEventSource) { taskEventSource.close(); taskEventSource = null; }
+    fetchSnapshot();
+  };
+}
+
+function updateTaskList(tasks) {
+  const c = $('task-list');
+  c.innerHTML = '';
+
+  if (!tasks || tasks.length === 0) {
+    c.innerHTML = '<div class="agent-row"><span class="agent-task" style="color:var(--ink-soft)">暂无任务</span></div>';
+    return;
+  }
+
+  for (const t of tasks) {
+    const statusIcon = { running: '🔄', queued: '⏳', paused: '⏸', completed: '✅', failed: '❌' }[t.status] || '•';
+    const name = (t.book_name || t.prompt || t.id || '').substring(0, 25);
+
+    const row = document.createElement('div');
+    row.className = 'agent-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:2px 4px;cursor:pointer;border-radius:3px;';
+    if (t.id === selectedTaskId) row.style.background = 'var(--primary-ring)';
+
+    const info = document.createElement('span');
+    info.style.cssText = 'flex:1;display:flex;align-items:center;gap:4px;min-width:0;';
+    info.innerHTML = `<span>${statusIcon}</span><span class="agent-name" data-task-id="${t.id}" style="font-size:11px;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(name)}</span>`;
+    info.onclick = () => selectTask(t.id);
+    row.appendChild(info);
+
+    // Action buttons
+    const actions = document.createElement('span');
+    actions.style.cssText = 'display:flex;gap:2px;flex-shrink:0;';
+
+    if (t.status === 'running') {
+      const pauseBtn = document.createElement('button');
+      pauseBtn.textContent = '⏸';
+      pauseBtn.title = '暂停';
+      pauseBtn.style.cssText = 'padding:0 4px;font-size:11px;border:1px solid var(--hairline);border-radius:3px;background:var(--surface);color:var(--warn);cursor:pointer;font-family:inherit;line-height:1.4;';
+      pauseBtn.onclick = async (e) => { e.stopPropagation(); const r = await fetch('/api/tasks/' + t.id + '/pause', { method: 'POST' }); if (r.ok) fetchSnapshot(); };
+      actions.appendChild(pauseBtn);
+    }
+
+    if (t.status === 'paused' || t.status === 'queued') {
+      const resumeBtn = document.createElement('button');
+      resumeBtn.textContent = '▶';
+      resumeBtn.title = '启动/恢复';
+      resumeBtn.style.cssText = 'padding:0 4px;font-size:11px;border:1px solid var(--hairline);border-radius:3px;background:var(--surface);color:var(--success);cursor:pointer;font-family:inherit;line-height:1.4;';
+      resumeBtn.onclick = async (e) => { e.stopPropagation(); const r = await fetch('/api/tasks/' + t.id + '/start', { method: 'POST' }); if (r.ok) fetchSnapshot(); else alert((await r.json()).error); };
+      actions.appendChild(resumeBtn);
+    }
+
+    if (t.status !== 'running') {
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '✕';
+      delBtn.title = '删除';
+      delBtn.style.cssText = 'padding:0 4px;font-size:11px;border:1px solid var(--hairline);border-radius:3px;background:var(--surface);color:var(--error);cursor:pointer;font-family:inherit;line-height:1.4;';
+      delBtn.onclick = async (e) => { e.stopPropagation(); if (!confirm('确认删除「' + (t.book_name || t.id) + '」？')) return; const r = await fetch('/api/tasks/' + t.id, { method: 'DELETE' }); if (r.ok) fetchSnapshot(); else alert((await r.json()).error); };
+      actions.appendChild(delBtn);
+    }
+
+    row.appendChild(actions);
+    c.appendChild(row);
+  }
+
+  // Auto-select running task if none selected
+  if (!selectedTaskId) {
+    const running = tasks.find(t => t.status === 'running');
+    if (running) selectTask(running.id);
+  }
+}
+
+// Keep the old updateStatusBar for runtime snapshots
 function updateStatusBar(s) {
   const state = s.RuntimeState || 'idle';
   const pill = $('status-pill');
@@ -1147,10 +1312,6 @@ function updateStatusBar(s) {
   $('stat-words').textContent = (s.TotalWordCount || 0).toLocaleString();
   $('stat-cost').textContent = '$' + (s.TotalCostUSD || 0).toFixed(2);
   $('stat-model').textContent = s.ModelName || '-';
-
-  if (s.RecoveryLabel && !s.IsRunning) {
-    $('btn-resume').style.display = '';
-  }
 }
 
 function phaseLabel(p) {
@@ -1185,7 +1346,11 @@ function updateAgents(s) {
   if (!agents.length) {
     html = '<div class="agent-row"><span class="agent-task" style="color:var(--ink-soft)">等待启动...</span></div>';
   }
-  $('agent-list').innerHTML = html;
+  const el = $('agent-list');
+  if (el._lastHTML !== html) {
+    el._lastHTML = html;
+    el.innerHTML = html;
+  }
 }
 
 /* Usage stats */
@@ -1204,7 +1369,7 @@ function updateUsage(s) {
     html += statRow('预算', '$' + s.TotalCostUSD.toFixed(2) + ' / $' + s.BudgetLimitUSD.toFixed(0));
     html += `<div class="stat-bar"><div class="stat-bar-fill" style="width:${Math.min(pct,100)}%;background:${pct>80?'var(--error)':pct>50?'var(--warn)':'var(--success)'}"></div></div>`;
   }
-  $('usage-stats').innerHTML = html;
+  setHTML('usage-stats', html);
 }
 
 function statRow(label, value) {
@@ -1231,7 +1396,7 @@ function updateCache(s) {
   } else if ((s.TotalCacheReadTokens || 0) === 0 && (s.TotalCacheWriteTokens || 0) === 0) {
     html += '<div class="stat-row"><span class="stat-label" style="color:var(--ink-soft)">未启用</span></div>';
   }
-  $('cache-stats').innerHTML = html || '<div class="stat-row"><span class="stat-label" style="color:var(--ink-soft)">-</span></div>';
+  setHTML('cache-stats', html || '<div class="stat-row"><span class="stat-label" style="color:var(--ink-soft)">-</span></div>');
 }
 
 /* Context stats */
@@ -1249,14 +1414,14 @@ function updateContext(s) {
   if (s.MissingAssistantUsage > 0) {
     html += '<div class="stat-row"><span class="stat-label" style="color:var(--warn)">⚠ 用量缺失</span></div>';
   }
-  $('context-stats').innerHTML = html || '<div class="stat-row"><span class="stat-label" style="color:var(--ink-soft)">-</span></div>';
+  setHTML('context-stats', html || '<div class="stat-row"><span class="stat-label" style="color:var(--ink-soft)">-</span></div>');
 }
 
 /* Outline grid */
 function updateOutline(s) {
   const outline = s.Outline || [];
   if (!outline.length) {
-    $('outline-grid').innerHTML = '<div style="font-size:11px;color:var(--ink-soft)">等待创作...</div>';
+    setHTML('outline-grid', '<div style="font-size:11px;color:var(--ink-soft)">等待创作...</div>');
     return;
   }
   let html = '<div class="chapter-grid">';
@@ -1268,14 +1433,14 @@ function updateOutline(s) {
     html += `<div class="chapter-cell ${cls}"><span>${marker}</span><span>${ch.Number}. ${escHtml(ch.Title || '')}</span></div>`;
   }
   html += '</div>';
-  $('outline-grid').innerHTML = html;
+  setHTML('outline-grid', html);
 }
 
 /* Characters */
 function updateCharacters(s) {
   const chars = s.Characters || [];
   if (!chars.length) {
-    $('character-list').innerHTML = '<div style="font-size:11px;color:var(--ink-soft)">等待创作...</div>';
+    setHTML('character-list', '<div style="font-size:11px;color:var(--ink-soft)">等待创作...</div>');
     return;
   }
   let html = '';
@@ -1283,20 +1448,30 @@ function updateCharacters(s) {
     html += `<div class="char-item">${escHtml(c)}</div>`;
   }
   if (chars.length > 12) html += `<div class="char-item" style="color:var(--ink-soft)">...还有 ${chars.length - 12} 个角色</div>`;
-  $('character-list').innerHTML = html;
+  setHTML('character-list', html);
 }
 
+
+// setHTML 仅在内容变化时更新 DOM，避免闪烁
+function setHTML(id, html) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el._lastHTML !== html) {
+    el._lastHTML = html;
+    el.innerHTML = html;
+  }
+}
 /* Detail (reviews, commits) */
 function updateDetail(s) {
   if (s.LastReviewSummary) {
-    $('review-summary').innerHTML = `<div class="card-label">最近审阅</div>${escHtml(s.LastReviewSummary)}`;
+    setHTML('review-summary', `<div class="card-label">最近审阅</div>${escHtml(s.LastReviewSummary)}`);
   } else {
-    $('review-summary').textContent = '-';
+    setHTML('review-summary', '-');
   }
   if (s.LastCommitSummary) {
-    $('commit-summary').innerHTML = `<div class="card-label">最近提交</div>${escHtml(s.LastCommitSummary)}`;
+    setHTML('commit-summary', `<div class="card-label">最近提交</div>${escHtml(s.LastCommitSummary)}`);
   } else {
-    $('commit-summary').textContent = '-';
+    setHTML('commit-summary', '-');
   }
 }
 
@@ -1547,6 +1722,7 @@ function renderRoleRows() {
   const c = $('role-rows');
   if (!configData) return;
   c.innerHTML = '';
+  const defaultProvider = configData.provider || '';
   for (const role of configData.roles || []) {
     const row = document.createElement('div'); row.className = 'role-grid';
     const label = document.createElement('label'); label.textContent = roleLabels[role.role] || role.role;
@@ -1556,7 +1732,8 @@ function renderRoleRows() {
     const thinkSel = document.createElement('select');
 
     for (const p of configData.providers || []) {
-      const o = document.createElement('option'); o.value = p; o.textContent = p; if (p === role.provider) o.selected = true;
+      const o = document.createElement('option'); o.value = p; o.textContent = p;
+      if (p === (role.provider || defaultProvider)) o.selected = true;
       provSel.appendChild(o);
     }
 
@@ -1564,34 +1741,84 @@ function renderRoleRows() {
       modelSel.innerHTML = '';
       const ms = configData.models[prov] || [];
       for (const m of ms) {
-        const o = document.createElement('option'); o.value = m; o.textContent = m; if (m === role.model) o.selected = true;
+        const o = document.createElement('option'); o.value = m; o.textContent = m;
+        if (m === role.model) o.selected = true;
         modelSel.appendChild(o);
       }
-      if (ms.length === 0) { const o = document.createElement('option'); o.textContent = role.model || '(无)'; modelSel.appendChild(o); }
+      if (ms.length === 0) {
+        const o = document.createElement('option'); o.value = ''; o.textContent = role.model || '请先选择渠道';
+        modelSel.appendChild(o);
+      } else if (!modelSel.querySelector('option[selected]')) {
+        modelSel.options[0].selected = true;
+      }
     };
-    fillModels(role.provider);
 
-    provSel.onchange = async () => {
-      fillModels(provSel.value);
-      try { await fetch('/api/model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: role.role, provider: provSel.value, model: modelSel.value }) }); } catch (_) {}
-    };
-    modelSel.onchange = async () => {
-      try { await fetch('/api/model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: role.role, provider: provSel.value, model: modelSel.value }) }); } catch (_) {}
-    };
+    // 用 role.provider，如果为空则用默认 provider 填充模型列表
+    const effectiveProv = role.provider || defaultProvider;
+    fillModels(effectiveProv);
+
+    provSel.onchange = () => fillModels(provSel.value);
 
     for (const t of thinkingOptions) {
       const o = document.createElement('option'); o.value = t.value; o.textContent = t.label;
       if (t.value === (role.thinking || '')) o.selected = true;
       thinkSel.appendChild(o);
     }
-    thinkSel.onchange = async () => {
-      try { await fetch('/api/thinking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: role.role, level: thinkSel.value }) }); } catch (_) {}
-    };
 
     row.append(label, provSel, modelSel, thinkSel);
     c.appendChild(row);
   }
 }
+
+/* 保存模型配置 */
+async function saveModelConfig() {
+  const statusEl = $('model-save-status');
+  statusEl.className = '';
+  statusEl.textContent = '保存中...';
+  const btn = $('btn-save-models');
+  btn.disabled = true;
+
+  const rows = $('role-rows').querySelectorAll('.role-grid');
+  let saved = 0, errors = 0;
+  for (const row of rows) {
+    const label = row.querySelector('label');
+    const selects = row.querySelectorAll('select');
+    const roleName = label.textContent;
+    const roleKey = Object.keys(roleLabels).find(k => roleLabels[k] === roleName) || roleName;
+    const provider = selects[0].value;
+    const model = selects[1].value;
+    const thinking = selects[2].value;
+
+    try {
+      const r = await fetch('/api/model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: roleKey, provider, model }) });
+      if (r.ok) saved++;
+      else { errors++; console.error('model save failed:', await r.json()); }
+    } catch (e) { errors++; console.error(e); }
+
+    try {
+      const r = await fetch('/api/thinking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: roleKey, level: thinking }) });
+      if (!r.ok) { errors++; console.error('thinking save failed:', await r.json()); }
+    } catch (e) { errors++; console.error(e); }
+  }
+
+  btn.disabled = false;
+  if (errors > 0) {
+    statusEl.className = 'model-save-status-err';
+    statusEl.textContent = `❌ 保存完成：${saved} 成功，${errors} 失败`;
+  } else {
+    statusEl.className = 'model-save-status-ok';
+    statusEl.textContent = '✅ 已保存';
+  }
+
+  // 刷新数据
+  configData = await fetch('/api/config').then(r => r.json());
+  renderProviders(); renderRoleRows();
+
+  // 3秒后清除提示
+  setTimeout(() => { statusEl.textContent = ''; statusEl.className = ''; }, 3000);
+}
+
+$('btn-save-models').onclick = saveModelConfig;
 
 /* Add provider */
 $('btn-add-provider').onclick = async () => {
@@ -1796,13 +2023,64 @@ $('stream-output').addEventListener('scroll', function() {
    INIT
    ═══════════════════════════════════════════════════════════════ */
 (async () => {
+  // 1. 检查正在运行的任务
   try {
     const snap = await fetch('/api/snapshot').then(r => r.json());
-    // If there's a recovery label, user might want to resume
     if (snap && snap.RecoveryLabel) {
       $('btn-resume').style.display = '';
     }
+    // 显示正在运行的任务
+    if (snap && snap.active_task) {
+      const activeTask = (snap.tasks || []).find(t => t.id === snap.active_task);
+      if (activeTask) {
+        $('running-task-bar').classList.remove('hidden');
+        $('running-task-name').textContent = activeTask.book_name || activeTask.prompt?.substring(0, 30) || activeTask.id;
+        if (activeTask.progress) {
+          $('running-task-phase').textContent =
+            '第' + activeTask.progress.chapters + '/' + activeTask.progress.total_chapters + '章 · ' +
+            (activeTask.progress.word_count || 0).toLocaleString() + '字';
+        } else {
+          $('running-task-phase').textContent = '准备中...';
+        }
+      }
+    }
   } catch (_) {}
+
+  // 2. 恢复共创会话
+  try {
+    const cs = await fetch('/api/cocreate').then(r => r.json());
+    if (cs && cs.messages && cs.messages.length > 0) {
+      // 切换到共创模式并恢复聊天
+      switchMode('cocreate');
+      cocreateDraft = cs.draft || '';
+      // 恢复聊天消息
+      const chat = $('cocreate-chat');
+      // 清除 placeholder
+      const placeholder = $('cocreate-placeholder');
+      if (placeholder) placeholder.remove();
+      for (const msg of cs.messages) {
+        addChatMsg(msg.role === 'assistant' ? 'ai' : msg.role, msg.content);
+      }
+      // 恢复建议
+      if (cs.suggestions && cs.suggestions.length > 0) {
+        const row = $('cocreate-suggestions');
+        row.innerHTML = '';
+        cs.suggestions.forEach(s => {
+          const btn = document.createElement('button');
+          btn.textContent = s;
+          btn.onclick = () => { $('cocreate-input').value = s; sendCoCreate(); };
+          row.appendChild(btn);
+        });
+      }
+      // 如果有草稿且 ready，显示开始按钮
+      if (cs.ready) {
+        $('btn-cocreate-start').classList.remove('hidden');
+        $('cocreate-status').classList.remove('hidden');
+        $('cocreate-status').textContent = '✓ 规划已就绪，点击"开始创作"';
+      }
+    }
+  } catch (_) {}
+
   $('startup-prompt').focus();
 })();
 </script>

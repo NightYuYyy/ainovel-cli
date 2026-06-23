@@ -60,7 +60,7 @@ func (s *LibraryStore) UpdateTask(updated domain.BookTask) error {
 		return fmt.Errorf("task %s not found", updated.ID)
 	}
 
-	return s.rewriteTasks(tasks)
+	return s.RewriteTasks(tasks)
 }
 
 // DeleteTask 删除一条任务记录。
@@ -80,7 +80,7 @@ func (s *LibraryStore) DeleteTask(id domain.BookID) error {
 		return fmt.Errorf("task %s not found", id)
 	}
 
-	return s.rewriteTasks(filtered)
+	return s.RewriteTasks(filtered)
 }
 
 // LoadTaskByID 按 ID 查找单条任务。
@@ -97,8 +97,8 @@ func (s *LibraryStore) LoadTaskByID(id domain.BookID) (*domain.BookTask, error) 
 	return nil, nil
 }
 
-// rewriteTasks 原子重写整个 tasks.jsonl（先写临时文件再 rename）。
-func (s *LibraryStore) rewriteTasks(tasks []domain.BookTask) error {
+// RewriteTasks 原子重写整个 tasks.jsonl（先写临时文件再 rename）。
+func (s *LibraryStore) RewriteTasks(tasks []domain.BookTask) error {
 	tmpRel := libraryTasksRel + ".tmp"
 	tmpPath := s.io.path(tmpRel)
 	finalPath := s.io.path(libraryTasksRel)

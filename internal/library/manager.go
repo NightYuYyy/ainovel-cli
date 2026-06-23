@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -75,6 +76,25 @@ func New(cfg bootstrap.Config, bundle assets.Bundle) *Manager {
 
 // LibDir 返回图书馆根目录。
 func (m *Manager) LibDir() string { return m.libDir }
+
+// RecoverStaleTasks 将残留的 running 状态任务（服务重启/崩溃）标记为 paused。
+func (m *Manager) RecoverStaleTasks() {
+	tasks, err := m.libStore.LoadTasks()
+	if err != nil {
+		slog.Warn("恢复任务状态失败", "module", "library", "err", err)
+		return
+	}
+	for i := range tasks {
+		if tasks[i].Status == domain.TaskRunning {
+			tasks[i].Status = domain.TaskPaused
+			tasks[i].Error = "服务重启，任务已暂停，可手动恢复"
+			slog.Info("恢复残留任务", "module", "library", "task_id", tasks[i].ID, "name", tasks[i].BookName)
+		}
+	}
+	if err := m.libStore.RewriteTasks(tasks); err != nil {
+		slog.Warn("保存恢复状态失败", "module", "library", "err", err)
+	}
+}
 
 // Events 返回管理器事件通道。
 func (m *Manager) Events() <-chan ManagerEvent { return m.events }
@@ -166,6 +186,13 @@ func (m *Manager) DeleteTask(id domain.BookID) error {
 	if err := m.libStore.DeleteTask(id); err != nil {
 		return fmt.Errorf("delete task: %w", err)
 	}
+
+	// 删除输出目录
+	outputDir := filepath.Join(m.libDir, string(id))
+	if err := os.RemoveAll(outputDir); err != nil {
+		slog.Warn("删除任务输出目录失败", "module", "library", "task_id", id, "dir", outputDir, "err", err)
+	}
+
 	slog.Info("任务已删除", "module", "library", "task_id", id)
 	return nil
 }
