@@ -496,6 +496,13 @@ func (m *Manager) GetHost(id domain.BookID) *host.Host {
 // ── 事件分发 ──
 
 func (m *Manager) emit(ev ManagerEvent) {
+	// 防止 Close() 后发送到已关闭的 channel
+	select {
+	case <-m.done:
+		return
+	default:
+	}
+
 	select {
 	case m.events <- ev:
 	default:

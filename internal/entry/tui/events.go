@@ -82,16 +82,32 @@ func listenDone(rt *host.Host) tea.Cmd {
 
 func tickSnapshot(rt *host.Host) tea.Cmd {
 	return tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+		if rt == nil {
+			return snapshotMsg{}
+		}
+		// 防止 host 已被关闭后访问
+		select {
+		case <-rt.Done():
+			return snapshotMsg{}
+		default:
+		}
 		return snapshotMsg(rt.Snapshot())
 	})
 }
 
 func fetchSnapshot(rt *host.Host) tea.Cmd {
 	return func() tea.Msg {
+		if rt == nil {
+			return snapshotMsg{}
+		}
+		select {
+		case <-rt.Done():
+			return snapshotMsg{}
+		default:
+		}
 		return snapshotMsg(rt.Snapshot())
 	}
 }
-
 func bootstrapRuntime(rt *host.Host) tea.Cmd {
 	return func() tea.Msg {
 		replay, err := rt.ReplayQueue(0)
