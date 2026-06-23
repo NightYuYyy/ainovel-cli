@@ -187,10 +187,19 @@ body {
   border-right: 1px solid var(--hairline);
   overflow: hidden;
 }
-#sidebar.collapsed { width: 32px; }
+#sidebar.collapsed {
+  width: 36px;
+  align-items: center;
+}
+#sidebar.collapsed #sidebar-body { display: none; }
+#sidebar.collapsed #sidebar-toggle {
+  flex: 1; border-bottom: none; font-size: 14px;
+  color: var(--ink-soft); width: 100%;
+}
+#sidebar.collapsed #sidebar-toggle:hover { color: var(--primary); background: var(--surface-hover); }
 #sidebar-toggle {
   display: flex; align-items: center; justify-content: center;
-  height: 28px; cursor: pointer;
+  height: 28px; cursor: pointer; flex-shrink: 0;
   font-size: 12px; color: var(--ink-soft);
   border-bottom: 1px solid var(--hairline-soft);
   user-select: none; transition: color 0.15s;
@@ -1749,6 +1758,7 @@ function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
   $('sidebar').classList.toggle('collapsed', !sidebarOpen);
   $('sidebar-toggle').textContent = sidebarOpen ? '◀' : '▶';
+  $('sidebar-toggle').title = sidebarOpen ? '折叠侧栏 (Ctrl+B)' : '展开侧栏 (Ctrl+B)';
 }
 
 function toggleDetail() {

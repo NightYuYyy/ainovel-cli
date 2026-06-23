@@ -166,6 +166,10 @@ func (m Model) handleBaseKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	switch msg.Type {
 	case tea.KeyEscape:
+		if m.mode == modeLibrary && m.libraryState.showConfirm {
+			m.libraryState.showConfirm = false
+			return m, nil
+		}
 		if m.mode == modeRunning && m.snapshot.IsRunning {
 			return m, abortRuntime(m.runtime)
 		}
@@ -204,31 +208,36 @@ func (m Model) handleBaseKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focusPane = (m.focusPane + 1) % focusPaneCount
 		return m, nil
 	case tea.KeyEnter:
-		// Alt+Enter 是主动换行，让 textarea.Update 接管（KeyMap.InsertNewline 已绑到此键）。
 		if msg.Alt {
 			break
 		}
-		// 与上一次非 Enter 按键间隔过短 → 视为粘贴流的 \n 残片：
-		// 替换为空格保留视觉间隔，与 cleanHumanKeyRunes 路径语义一致（"abc\ndef" → "abc def"）。
-		// 防御 bracketed paste 失效的终端环境（旧 SSH/某些 tmux 配置）。
 		if !m.lastKeyAt.IsZero() && time.Since(m.lastKeyAt) < 50*time.Millisecond {
 			var cmd tea.Cmd
 			m.textarea, cmd = m.textarea.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
 			m.refitTextareaHeight()
 			return m, cmd
 		}
+		if m.mode == modeLibrary {
+			return m.handleLibraryEnter()
+		}
 		return m.handleEnterKey()
 	case tea.KeyUp:
-		// 多行输入：让 textarea 接管光标行内移动（落到 switch 后的 textarea.Update）
+		if m.mode == modeLibrary {
+			m.handleLibraryNav(-1)
+			return m, nil
+		}
 		if m.textareaIsMultiline() {
 			break
 		}
-		// 单行：优先翻历史，没有可用历史时回退到事件流滚动
 		if m.tryHistoryUp() {
 			return m, nil
 		}
 		return m.handleVerticalScrollKey(msg, true)
 	case tea.KeyDown:
+		if m.mode == modeLibrary {
+			m.handleLibraryNav(1)
+			return m, nil
+		}
 		if m.textareaIsMultiline() {
 			break
 		}
@@ -256,6 +265,13 @@ func (m Model) handleBaseKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// 图书馆模式：拦截单字母命令键
+	if m.mode == modeLibrary && msg.Type == tea.KeyRunes && len(msg.Runes) == 1 {
+		if next, cmd, handled := m.handleLibraryKeyRune(msg.Runes[0]); handled {
+			return next, cmd
+		}
+	}
+
 	if msg.Type == tea.KeyRunes && (containsSGRFragment(string(msg.Runes)) || isCSILeak(msg.Runes)) {
 		return m, nil
 	}
@@ -271,6 +287,7 @@ func (m Model) handleBaseKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// handleEnterKey 处理 Enter 键提交。
 func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	text := utils.CleanInputLine(m.textarea.Value())
 	if text == "" {
@@ -449,10 +466,10 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		m.refreshStateViewport()
 		return m, tickSnapshot(m.runtime), true
 	case doneMsg:
+		if m.libManager != nil {
+			return m.handleLibraryTaskDone(msg)
+		}
 		m.snapshot.IsRunning = false
-		m.refreshEventViewport()
-		m.refreshStreamViewport()
-		m.refreshStateViewport()
 		if msg.complete {
 			m.abortPending = false
 			m.mode = modeDone

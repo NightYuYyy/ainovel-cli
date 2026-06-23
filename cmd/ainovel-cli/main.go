@@ -107,7 +107,7 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 		if err != nil {
 			die("error: %v", err)
 		}
-		if err := headless.Run(cfg, bundle, headless.Options{Prompt: prompt}); err != nil {
+		if err := headless.RunLibrary(cfg, bundle, headless.Options{Prompt: prompt}); err != nil {
 			die("error: %v", err)
 		}
 		return
@@ -116,12 +116,12 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 		die("error: --prompt/--prompt-file 仅能在 --headless 模式下使用")
 	}
 	if opts.Web {
-		if err := web.Run(cfg, bundle, web.Options{Addr: opts.WebAddr}); err != nil {
+		if err := web.RunLibrary(cfg, bundle, web.Options{Addr: opts.WebAddr}); err != nil {
 			die("error: %v", err)
 		}
 		return
 	}
-	if err := tui.Run(cfg, bundle, versionInfo().Version); err != nil {
+	if err := tui.RunLibrary(cfg, bundle, versionInfo().Version); err != nil {
 		die("error: %v", err)
 	}
 }
